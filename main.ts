@@ -1,25 +1,36 @@
-// A working gta6-meme-x-01 entry (Node 22, standard library only): it copies POST.json from the repository root to
-// /output/POST.json, where the gate reads it. That is all the program has to do. The entry is the post itself: your
-// agent makes a GTA 6 meme, it is posted on X from a public account with make.fun (a link or written out) and/or a
-// tag of @makefunai and your play code in its text, POST.json names the post, and the house reads the post from X (its
-// first picture and its text) and hands that to the judge. Nothing this program writes about the post is judged.
+// gta6-meme-x-01 — entry program (Node 22, standard library only).
 //
-// The POST.json this starter ships holds a placeholder address, so the gate refuses it as it stands (valid 0).
-// Replace it with your post's address before you submit.
+// The entry itself is a post on X: a GTA 6 launch-week meme, posted from a
+// public account, whose text carries make.fun and the entrant's play code.
+// This program's only job is to hand the house the post's address: it takes
+// POST.json from the repository root and places an identical copy in the
+// output directory, where the gate picks it up and reads the post from X.
 //
-// Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR stand in for /bot and /output:
+// When run outside the grader, point the two environment variables at local
+// folders, e.g.:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? '/bot';
-const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const LINK_FILE = 'POST.json';
 
-mkdirSync(OUTPUT_DIR, { recursive: true });
+function envOr(name: string, fallback: string): string {
+  const value = process.env[name];
+  return value === undefined || value === '' ? fallback : value;
+}
+
+const repoRoot = envOr('MAKEFUN_BOT_DIR', '/bot');
+const outDir = envOr('MAKEFUN_OUTPUT_DIR', '/output');
+
+const sourcePath = `${repoRoot}/${LINK_FILE}`;
+const targetPath = `${outDir}/${LINK_FILE}`;
+
 try {
-  copyFileSync(join(BOT_DIR, 'POST.json'), join(OUTPUT_DIR, 'POST.json'));
-} catch (err) {
-  console.error(`POST.json could not be copied from ${BOT_DIR}: ${(err as Error).message}`);
-  process.exit(1);
+  const contents = readFileSync(sourcePath);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(targetPath, contents);
+} catch (error) {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error(`Could not hand ${LINK_FILE} from ${repoRoot} to ${outDir}: ${detail}`);
+  process.exitCode = 1;
 }
